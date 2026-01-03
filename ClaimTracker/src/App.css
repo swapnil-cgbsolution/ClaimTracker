@@ -612,3 +612,221 @@
     flex-direction: column;
   }
 }
+
+/* Light theme overrides */
+:root {
+  color-scheme: light;
+  --ink: #0f172a;
+  --ink-muted: rgba(15, 23, 42, 0.65);
+  --ink-soft: rgba(15, 23, 42, 0.4);
+  --surface: #ffffff;
+  --surface-muted: #f4f6fb;
+  --surface-accent: #e9edff;
+  --border: rgba(15, 23, 42, 0.08);
+  --shadow-soft: 0 18px 50px rgba(15, 23, 42, 0.08);
+  --accent: #3756ff;
+  --accent-strong: #1827aa;
+  --accent-secondary: #ff7a18;
+  --success: #0f9c70;
+  --warning: #f97316;
+  --danger: #e0245e;
+}
+
+.app-shell {
+  background: var(--surface-muted);
+  color: var(--ink);
+}
+
+.hero {
+  background: linear-gradient(135deg, #ffffff, #f2f5ff);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-soft);
+}
+
+.hero__content .lead {
+  color: var(--ink-muted);
+}
+
+.hero__metrics .metric-card,
+.insight-card,
+.workflow,
+.status-alerts,
+.repository,
+.vendor-interface,
+.audit-access,
+.validation,
+.training,
+.ops-panel,
+.ops-panel__list,
+.ops-panel__detail,
+.entity-form {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-soft);
+}
+
+.hero__metrics .metric-card small,
+.muted,
+.entity-table small,
+.entity-detail dt,
+.vendor-card span,
+.section-heading p {
+  color: var(--ink-soft);
+}
+
+.cta {
+  background: linear-gradient(90deg, var(--accent), #7f8dff);
+  color: #ffffff;
+  box-shadow: 0 10px 30px rgba(55, 86, 255, 0.25);
+}
+
+.cta:disabled {
+  opacity: 0.6;
+}
+
+.ghost {
+  background: #ffffff;
+  color: var(--ink);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.insight-card ul,
+.alert-chip,
+.deal-pill,
+.status-tile,
+.validation-list li,
+.repository-card,
+.vendor-card,
+.training-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink);
+}
+
+.alert-chip {
+  color: var(--ink);
+}
+
+.alert-chip.status-on-track {
+  border-color: rgba(15, 156, 112, 0.35);
+  background: rgba(15, 156, 112, 0.08);
+}
+
+.alert-chip.status-at-risk {
+  border-color: rgba(249, 115, 22, 0.35);
+  background: rgba(249, 115, 22, 0.08);
+}
+
+.alert-chip.status-breached {
+  border-color: rgba(224, 36, 94, 0.4);
+  background: rgba(224, 36, 94, 0.08);
+}
+
+.deal-pill {
+  background: var(--surface-muted);
+}
+
+.deal-pill.risk-high {
+  border-color: rgba(224, 36, 94, 0.35);
+}
+
+.deal-pill.risk-medium {
+  border-color: rgba(249, 115, 22, 0.35);
+}
+
+.deal-pill.risk-low {
+  border-color: rgba(15, 156, 112, 0.35);
+}
+
+.status-alerts {
+  box-shadow: none;
+}
+
+.status-tile em {
+  color: var(--ink-soft);
+}
+
+.repository-card footer,
+.vendor-card p {
+  color: var(--ink-muted);
+}
+
+.audit-access {
+  box-shadow: none;
+}
+
+.access-panel table th,
+.access-panel table td {
+  border-color: var(--border);
+}
+
+.inline-error,
+.inline-feedback {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.inline-error {
+  border-color: rgba(224, 36, 94, 0.4);
+  color: var(--danger);
+}
+
+.inline-feedback,
+.inline-feedback.success {
+  border-color: rgba(15, 156, 112, 0.35);
+  color: var(--success);
+}
+
+.ops-panel__list,
+.ops-panel__detail {
+  box-shadow: none;
+}
+
+.entity-table tr:hover,
+.entity-table tr.selected {
+  background: var(--surface-accent);
+}
+
+.entity-form {
+  border: 1px solid var(--border);
+}
+
+.form-grid input,
+.entity-form textarea,
+.entity-form select {
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid var(--border);
+}
+
+.pill {
+  border-color: var(--border);
+  color: var(--ink);
+}
+
+.pill-success {
+  border-color: rgba(15, 156, 112, 0.45);
+  color: var(--success);
+}
+
+.pill-neutral {
+  border-color: var(--border);
+  color: var(--ink-muted);
+}
+
+.pill.status-breached {
+  border-color: rgba(224, 36, 94, 0.4);
+  color: var(--danger);
+}
+
+.hero__metrics strong,
+.status-tile strong,
+.repository-card strong,
+.vendor-card strong,
+.entity-detail h3,
+.entity-table strong {
+  color: var(--ink);
+}
