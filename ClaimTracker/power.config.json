@@ -1,5 +1,5 @@
 {
-  "appId": "",
+  "appId": "068b86e1-5b51-45fe-8279-5678a51a9933",
   "appDisplayName": "Claim Tracker",
   "description": null,
   "environmentId": "9e7e6b86-2a03-eeaa-bc99-9ed6103cefd6",
@@ -11,9 +11,7 @@
   "connectionReferences": {},
   "databaseReferences": {
     "default.cds": {
-      "state": "Configured",
-      "instanceUrl": "https://org76516836.crm8.dynamics.com/",
-      "webApiVersion": "v9.0",
+      "databaseDetails": null,
       "dataSources": {
         "promotionclaims": {
           "entitySetName": "crd2f_promotionclaims",
@@ -56,8 +54,7 @@
           "isHidden": false
         }
       },
-      "version": "v9.0",
-      "environmentVariableName": ""
+      "actions": null
     }
   }
 }

@@ -1,25 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import './App.css'
-
-type PromotionDeal = {
-  id: string
-  name: string
-  vendor: string
-  value: number
-  stage: string
-  approvalOwner: string
-  slaHours: number
-  risk: 'Low' | 'Medium' | 'High'
-}
-
-type ClaimRecord = {
-  claimId: string
-  dealRef: string
-  amount: number
-  stage: string
-  slaStatus: 'On Track' | 'At Risk' | 'Breached'
-  owner: string
-}
+import type { Crd2f_promotionclaims } from './generated/models/Crd2f_promotionclaimsModel'
+import { DataverseProvider, useDataverse, type ClaimDraft, type DealDraft } from './state/DataverseContext'
 
 type ProofOfExecution = {
   id: string
@@ -54,77 +36,34 @@ type RoleMatrix = {
   canAudit: boolean
 }
 
-const deals: PromotionDeal[] = [
+const stageFlow = [
   {
-    id: 'DL-9087',
-    name: 'Back-to-School Bundle',
-    vendor: 'HP Middle East',
-    value: 420000,
     stage: 'Initiation',
-    approvalOwner: 'Retail Programs',
-    slaHours: 48,
-    risk: 'Low',
+    description: 'Deal sheet intake, vendor validations, duplicate controls',
+    gate: 'Policy compliance (crd2f_promotiondeal)',
+    sla: '48h response',
   },
   {
-    id: 'DL-9131',
-    name: 'Festive Weekend Flash Sale',
-    vendor: 'Samsung',
-    value: 610000,
     stage: 'Approval',
-    approvalOwner: 'Finance Review',
-    slaHours: 36,
-    risk: 'Medium',
+    description: 'Finance + Retail approval routed through systemuser owners',
+    gate: 'Budget guardrails',
+    sla: '36h approval',
   },
   {
-    id: 'DL-9190',
-    name: 'Accessory Add-on Booster',
-    vendor: 'Belkin',
-    value: 125000,
     stage: 'Execution',
-    approvalOwner: 'Marketing Ops',
-    slaHours: 72,
-    risk: 'Low',
+    description: 'Proof-of-execution uploads & schedule tracking',
+    gate: 'Proof completeness (crd2f_promotionproof)',
+    sla: '72h evidence upload',
   },
   {
-    id: 'DL-9214',
-    name: 'Vendor Funded Warranty',
-    vendor: 'LG Electronics',
-    value: 880000,
     stage: 'Settlement',
-    approvalOwner: 'Finance Ops',
-    slaHours: 24,
-    risk: 'High',
+    description: 'Claim validation, SLA monitoring & auto-escalations',
+    gate: 'Audit-ready package',
+    sla: '10d settlement',
   },
 ]
 
-const claims: ClaimRecord[] = [
-  {
-    claimId: 'CLM-4551',
-    dealRef: 'DL-9131',
-    amount: 245000,
-    stage: 'Validation',
-    slaStatus: 'On Track',
-    owner: 'Finance Review',
-  },
-  {
-    claimId: 'CLM-4557',
-    dealRef: 'DL-9214',
-    amount: 610000,
-    stage: 'Finance Review',
-    slaStatus: 'At Risk',
-    owner: 'Finance Ops',
-  },
-  {
-    claimId: 'CLM-4560',
-    dealRef: 'DL-9190',
-    amount: 98000,
-    stage: 'Settlement',
-    slaStatus: 'Breached',
-    owner: 'Payments',
-  },
-]
-
-const proofs: ProofOfExecution[] = [
+const proofShowcase: ProofOfExecution[] = [
   {
     id: 'POE-7821',
     channel: 'Dubai Mall | Digital',
@@ -145,6 +84,33 @@ const proofs: ProofOfExecution[] = [
     assets: ['floorstand.jpg', 'banner.png', 'staff-brief.pdf'],
     uploadedBy: 'Vendor Success',
     timestamp: '2026-01-03 08:05',
+  },
+]
+
+const vendorSpotlight: VendorProfile[] = [
+  {
+    id: 'VND-88',
+    name: 'Samsung Gulf',
+    category: 'Consumer Electronics',
+    contact: 'vendors@samsung.com',
+    upcomingPromotions: 3,
+    pendingClaims: 2,
+  },
+  {
+    id: 'VND-41',
+    name: 'HP Middle East',
+    category: 'Computing',
+    contact: 'hp@partners.com',
+    upcomingPromotions: 2,
+    pendingClaims: 1,
+  },
+  {
+    id: 'VND-12',
+    name: 'Belkin',
+    category: 'Accessories',
+    contact: 'success@belkin.com',
+    upcomingPromotions: 1,
+    pendingClaims: 0,
   },
 ]
 
@@ -179,33 +145,6 @@ const auditTrail: AuditEvent[] = [
   },
 ]
 
-const vendors: VendorProfile[] = [
-  {
-    id: 'VND-88',
-    name: 'Samsung Gulf',
-    category: 'Consumer Electronics',
-    contact: 'vendors@samsung.com',
-    upcomingPromotions: 3,
-    pendingClaims: 2,
-  },
-  {
-    id: 'VND-41',
-    name: 'HP Middle East',
-    category: 'Computing',
-    contact: 'hp@partners.com',
-    upcomingPromotions: 2,
-    pendingClaims: 1,
-  },
-  {
-    id: 'VND-12',
-    name: 'Belkin',
-    category: 'Accessories',
-    contact: 'success@belkin.com',
-    upcomingPromotions: 1,
-    pendingClaims: 0,
-  },
-]
-
 const roleMatrix: RoleMatrix[] = [
   {
     role: 'Retail Programs',
@@ -235,40 +174,6 @@ const roleMatrix: RoleMatrix[] = [
     canApprove: false,
     canAudit: false,
   },
-]
-
-const stageFlow = [
-  {
-    stage: 'Initiation',
-    description: 'Deal sheet intake, vendor validations, duplicate controls',
-    gate: 'Policy compliance (crd2f_promotiondeal)',
-    sla: '48h response',
-  },
-  {
-    stage: 'Approval',
-    description: 'Finance + Retail approval routed through systemuser owners',
-    gate: 'Budget guardrails',
-    sla: '36h approval',
-  },
-  {
-    stage: 'Execution',
-    description: 'Proof-of-execution uploads & schedule tracking',
-    gate: 'Proof completeness (crd2f_promotionproof)',
-    sla: '72h evidence upload',
-  },
-  {
-    stage: 'Settlement',
-    description: 'Claim validation, SLA monitoring & auto-escalations',
-    gate: 'Audit-ready package',
-    sla: '10d settlement',
-  },
-]
-
-const statusBoard = [
-  { label: 'Pending approvals', value: 12, trend: '+3', table: 'crd2f_promotionstatus' },
-  { label: 'Claims at risk', value: 4, trend: '+1', table: 'crd2f_promotionclaim' },
-  { label: 'Escalations', value: 2, trend: '0', table: 'crd2f_audittrail' },
-  { label: 'Vendor tasks', value: 9, trend: '-2', table: 'crd2f_vendor' },
 ]
 
 const validationControls = [
@@ -304,32 +209,197 @@ const currencyFormatter = new Intl.NumberFormat('en-AE', {
   maximumFractionDigits: 0,
 })
 
-function App() {
-  const [activeStage, setActiveStage] = useState(stageFlow[1].stage)
+const dateFormatter = new Intl.DateTimeFormat('en-GB', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+})
 
-  const repositoryStats = useMemo(
+function formatDate(value?: string) {
+  if (!value) return '—'
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) {
+    return value
+  }
+  return dateFormatter.format(parsed)
+}
+
+function formatAmount(value?: string) {
+  if (!value) return '—'
+  const parsed = Number(value)
+  if (Number.isNaN(parsed)) {
+    return value
+  }
+  return currencyFormatter.format(parsed)
+}
+
+function getClaimStatus(claim: Crd2f_promotionclaims) {
+  if (claim.statuscode === 2) {
+    return { label: 'Breached', className: 'status-breached' }
+  }
+  if (claim.statecode === 1) {
+    return { label: 'At Risk', className: 'status-at-risk' }
+  }
+  return { label: 'On Track', className: 'status-on-track' }
+}
+
+function Workspace() {
+  const {
+    user,
+    deals,
+    claims,
+    vendors,
+    loading,
+    syncing,
+    error,
+    refresh,
+    createDeal,
+    createClaim,
+  } = useDataverse()
+
+  const [selectedDealId, setSelectedDealId] = useState<string>()
+  const [selectedClaimId, setSelectedClaimId] = useState<string>()
+  const [dealFormOpen, setDealFormOpen] = useState(false)
+  const [claimFormOpen, setClaimFormOpen] = useState(false)
+  const [dealForm, setDealForm] = useState<DealDraft>({
+    name: '',
+    category: '',
+    startDate: '',
+    endDate: '',
+    description: '',
+  })
+  const [claimForm, setClaimForm] = useState<ClaimDraft>({
+    claimNumber: '',
+    amount: '',
+    claimDate: '',
+    dealId: '',
+    vendorId: '',
+  })
+  const [dealFeedback, setDealFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null)
+  const [claimFeedback, setClaimFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null)
+
+  useEffect(() => {
+    if (!deals.length) {
+      setSelectedDealId(undefined)
+      return
+    }
+    if (!selectedDealId || !deals.some((deal) => deal.crd2f_promotiondealid === selectedDealId)) {
+      setSelectedDealId(deals[0].crd2f_promotiondealid)
+    }
+  }, [deals, selectedDealId])
+
+  useEffect(() => {
+    if (!claims.length) {
+      setSelectedClaimId(undefined)
+      return
+    }
+    if (!selectedClaimId || !claims.some((claim) => claim.crd2f_promotionclaimid === selectedClaimId)) {
+      setSelectedClaimId(claims[0].crd2f_promotionclaimid)
+    }
+  }, [claims, selectedClaimId])
+
+  useEffect(() => {
+    if (!claimForm.dealId && selectedDealId) {
+      setClaimForm((prev) => ({ ...prev, dealId: selectedDealId }))
+    }
+  }, [claimForm.dealId, selectedDealId])
+
+  const selectedDeal = useMemo(
+    () => deals.find((deal) => deal.crd2f_promotiondealid === selectedDealId),
+    [deals, selectedDealId]
+  )
+
+  const selectedDealClaims = useMemo(
+    () =>
+      selectedDeal
+        ? claims.filter((claim) => claim._crd2f_deal_value === selectedDeal.crd2f_promotiondealid)
+        : [],
+    [claims, selectedDeal]
+  )
+
+  const selectedClaim = useMemo(
+    () => claims.find((claim) => claim.crd2f_promotionclaimid === selectedClaimId),
+    [claims, selectedClaimId]
+  )
+
+  const alertClaims = useMemo(() => claims.slice(0, 4), [claims])
+  const slaBreaches = useMemo(() => claims.filter((claim) => claim.statuscode === 2), [claims])
+  const slaHealth = useMemo(() => {
+    if (!claims.length) return 100
+    return Math.round(((claims.length - slaBreaches.length) / claims.length) * 100)
+  }, [claims, slaBreaches])
+
+  const heroStats = useMemo(
     () => ({
       deals: deals.length,
-      documents: proofs.reduce((acc, proof) => acc + proof.assets.length, 0),
+      documents: claims.length,
       vendors: vendors.length,
-      openClaims: claims.length,
+      openClaims: claims.filter((claim) => claim.statecode === 0).length,
     }),
-    []
+    [claims, deals, vendors]
   )
 
-  const stageQueue = useMemo(
-    () => deals.filter((deal) => deal.stage === activeStage),
-    [activeStage]
+  const statusTiles = useMemo(
+    () => [
+      { label: 'Active deals', value: deals.length, table: 'crd2f_promotiondeal' },
+      { label: 'Claims filed', value: claims.length, table: 'crd2f_promotionclaim' },
+      {
+        label: 'Vendors synced',
+        value: vendors.length,
+        table: 'crd2f_vendor',
+      },
+      {
+        label: 'Claims needing attention',
+        value: slaBreaches.length,
+        table: 'crd2f_promotionclaim',
+      },
+    ],
+    [claims, deals, slaBreaches.length, vendors]
   )
 
-  const slaBreaches = useMemo(
-    () => claims.filter((claim) => claim.slaStatus !== 'On Track'),
-    []
-  )
+  const resetDealForm = () => {
+    setDealForm({ name: '', category: '', startDate: '', endDate: '', description: '' })
+  }
 
-  const slaHealth = Math.round(
-    ((claims.length - slaBreaches.length) / claims.length) * 100
-  )
+  const resetClaimForm = () => {
+    setClaimForm({ claimNumber: '', amount: '', claimDate: '', dealId: '', vendorId: '' })
+  }
+
+  const handleDealSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setDealFeedback(null)
+    if (!dealForm.name.trim()) {
+      setDealFeedback({ type: 'error', message: 'Deal name is required.' })
+      return
+    }
+
+    try {
+      await createDeal(dealForm)
+      setDealFeedback({ type: 'success', message: 'Promotion deal created successfully.' })
+      setDealFormOpen(false)
+      resetDealForm()
+    } catch (err) {
+      setDealFeedback({ type: 'error', message: (err as Error).message })
+    }
+  }
+
+  const handleClaimSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setClaimFeedback(null)
+    if (!claimForm.claimNumber.trim()) {
+      setClaimFeedback({ type: 'error', message: 'Claim number is required.' })
+      return
+    }
+
+    try {
+      await createClaim(claimForm)
+      setClaimFeedback({ type: 'success', message: 'Claim submitted to Dataverse.' })
+      setClaimFormOpen(false)
+      resetClaimForm()
+    } catch (err) {
+      setClaimFeedback({ type: 'error', message: (err as Error).message })
+    }
+  }
 
   return (
     <div className="app-shell">
@@ -338,38 +408,44 @@ function App() {
           <p className="eyebrow">Sharaf DG · Promotion Command Center</p>
           <h1>Claim Tracker for vendor-funded promotions</h1>
           <p className="lead">
-            A single, secure workspace orchestrating deal sheets, approvals, proof of
-            execution, and claim settlement. Every action is versioned, every
-            stakeholder stays informed, and every SLA is monitored.
+            A single, secure workspace orchestrating deal sheets, approvals, proof of execution, and claim settlement
+            directly against Dataverse.
           </p>
           <div className="hero__actions">
-            <button className="cta">Launch workflow</button>
-            <button className="ghost">View vendor portal</button>
+            <button className="cta" onClick={() => refresh()} disabled={syncing}>
+              {syncing ? 'Syncing…' : 'Refresh data'}
+            </button>
+            <button className="ghost" disabled>
+              {user?.fullName ?? 'Resolving user…'}
+            </button>
           </div>
         </div>
         <div className="hero__metrics">
           <div className="metric-card">
             <span>Active deals</span>
-            <strong>{repositoryStats.deals}</strong>
+            <strong>{heroStats.deals}</strong>
             <small>crd2f_promotiondeal</small>
           </div>
           <div className="metric-card">
-            <span>Documents stored</span>
-            <strong>{repositoryStats.documents}</strong>
-            <small>crd2f_promotionproof</small>
+            <span>Claims logged</span>
+            <strong>{heroStats.documents}</strong>
+            <small>crd2f_promotionclaim</small>
           </div>
           <div className="metric-card">
             <span>Vendors engaged</span>
-            <strong>{repositoryStats.vendors}</strong>
+            <strong>{heroStats.vendors}</strong>
             <small>crd2f_vendor</small>
           </div>
           <div className="metric-card">
             <span>Open claims</span>
-            <strong>{repositoryStats.openClaims}</strong>
-            <small>crd2f_promotionclaim</small>
+            <strong>{heroStats.openClaims}</strong>
+            <small>State · Active</small>
           </div>
         </div>
       </header>
+
+      {error && <div className="inline-error">{error}</div>}
+      {loading && <div className="inline-feedback muted">Loading Dataverse data…</div>}
 
       <section className="insights-grid">
         <article className="insight-card">
@@ -377,9 +453,8 @@ function App() {
             <p className="eyebrow">Centralized repository</p>
             <h2>Every promotion artifact in one vault</h2>
             <p>
-              Store deal sheets, agreements, proofs, and claim notes with lineage back to
-              the originating Dataverse tables. Finance, Retail, Marketing, and Vendor
-              Management operate on the same source of truth.
+              Store deal sheets, agreements, proofs, and claim notes with lineage back to the originating Dataverse
+              tables. Finance, Retail, Marketing, and Vendor Management operate on the same source of truth.
             </p>
           </div>
           <ul>
@@ -393,8 +468,8 @@ function App() {
             <p className="eyebrow">Workflow automation</p>
             <h2>Initiation → approvals → execution → settlement</h2>
             <p>
-              Digitally route submissions, approvals, document uploads, and control gates.
-              Smart escalations trigger when SLA thresholds are crossed.
+              Digitally route submissions, approvals, document uploads, and control gates. Smart escalations trigger when
+              SLA thresholds are crossed.
             </p>
           </div>
           <div className="workflow-badges">
@@ -408,23 +483,22 @@ function App() {
             <p className="eyebrow">Real-time alerts</p>
             <h2>Status feeds & proactive nudges</h2>
             <p>
-              System-generated notifications flag pending approvals, proof deadlines,
-              claim cut-off dates, and escalations for leadership visibility.
+              System-generated notifications flag pending approvals, proof deadlines, claim cut-off dates, and
+              escalations for leadership visibility.
             </p>
           </div>
           <div className="alert-feed">
-            {claims.map((claim) => (
-              <div
-                key={claim.claimId}
-                className={`alert-chip status-${claim.slaStatus
-                  .toLowerCase()
-                  .replace(/\s+/g, '-')}`}
-              >
-                <strong>{claim.claimId}</strong>
-                <span>{claim.slaStatus}</span>
-                <small>{claim.stage}</small>
-              </div>
-            ))}
+            {alertClaims.length === 0 && <p className="muted">No claims have been synced yet.</p>}
+            {alertClaims.map((claim) => {
+              const status = getClaimStatus(claim)
+              return (
+                <div key={claim.crd2f_promotionclaimid} className={`alert-chip ${status.className}`}>
+                  <strong>{claim.crd2f_claimnumber}</strong>
+                  <span>{status.label}</span>
+                  <small>{claim.crd2f_dealname ?? 'Unlinked deal'}</small>
+                </div>
+              )
+            })}
           </div>
         </article>
         <article className="insight-card">
@@ -432,49 +506,362 @@ function App() {
             <p className="eyebrow">Vendor contracts</p>
             <h2>Every claim tied back to the source agreement</h2>
             <p>
-              Validate promotional claims against stored vendor contracts. Exceptions are
-              blocked unless matching commercial terms exist.
+              Validate promotional claims against stored vendor contracts. Exceptions are blocked unless matching
+              commercial terms exist.
             </p>
           </div>
           <div className="contract-pill">Linked agreements · 100% coverage</div>
         </article>
       </section>
 
-      <section className="workflow">
+      <section className="workflow live-ops">
         <div className="section-heading">
-          <h2>Deal & claim workflow</h2>
-          <p>Governed via crd2f_promotionstatus with systemuser ownership and audit logs.</p>
+          <h2>Live promotion & claim workspace</h2>
+          <p>Read + write operations use the generated services and the Power Apps host context.</p>
         </div>
-        <div className="timeline">
-          {stageFlow.map((stage) => (
-            <button
-              key={stage.stage}
-              className={`timeline-step ${activeStage === stage.stage ? 'active' : ''}`}
-              onClick={() => setActiveStage(stage.stage)}
-            >
-              <span>{stage.stage}</span>
-              <p>{stage.description}</p>
-              <small>
-                Control gate: {stage.gate} · SLA {stage.sla}
-              </small>
-            </button>
-          ))}
-        </div>
-        <div className="stage-detail">
-          <div>
-            <h3>Queue · {activeStage}</h3>
-            <p>{stageQueue.length} deal(s) waiting on this gate.</p>
-          </div>
-          <div className="deal-pills">
-            {stageQueue.map((deal) => (
-              <div key={deal.id} className={`deal-pill risk-${deal.risk.toLowerCase()}`}>
-                <strong>{deal.name}</strong>
-                <span>{deal.vendor}</span>
-                <small>SLA {deal.slaHours}h · Owner {deal.approvalOwner}</small>
+        <div className="ops-grid">
+          <article className="ops-panel">
+            <header className="ops-panel__header">
+              <div>
+                <p className="eyebrow">Promotions</p>
+                <h3>Promotion deal library</h3>
+                <p className="muted">
+                  {deals.length ? `${deals.length} records loaded from crd2f_promotiondeal.` : 'No promotions found yet.'}
+                </p>
               </div>
-            ))}
-            {stageQueue.length === 0 && <p className="muted">No deals in this stage.</p>}
-          </div>
+              <button className="cta" onClick={() => setDealFormOpen((open) => !open)}>
+                {dealFormOpen ? 'Close form' : 'New deal'}
+              </button>
+            </header>
+
+            <div className="ops-panel__body">
+              <div className="ops-panel__list">
+                <table className="entity-table">
+                  <thead>
+                    <tr>
+                      <th>Deal</th>
+                      <th>Status</th>
+                      <th>Start</th>
+                      <th>Updated</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {deals.map((deal) => (
+                      <tr
+                        key={deal.crd2f_promotiondealid}
+                        className={deal.crd2f_promotiondealid === selectedDealId ? 'selected' : ''}
+                        onClick={() => setSelectedDealId(deal.crd2f_promotiondealid)}
+                      >
+                        <td>
+                          <strong>{deal.crd2f_dealname ?? 'Untitled deal'}</strong>
+                          <small>{deal.crd2f_category ?? '—'}</small>
+                        </td>
+                        <td>
+                          <span className={`pill ${deal.statecode === 0 ? 'pill-success' : 'pill-neutral'}`}>
+                            {deal.statecode === 0 ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td>{formatDate(deal.crd2f_startdate)}</td>
+                        <td>{formatDate(deal.modifiedon ?? deal.createdon)}</td>
+                      </tr>
+                    ))}
+                    {!deals.length && (
+                      <tr>
+                        <td colSpan={4} className="muted">
+                          No Dataverse promotions yet. Use "New deal" to create one.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <div className="ops-panel__detail">
+                {selectedDeal ? (
+                  <div className="entity-detail">
+                    <header>
+                      <h3>{selectedDeal.crd2f_dealname ?? 'Untitled deal'}</h3>
+                      <span className={`pill ${selectedDeal.statecode === 0 ? 'pill-success' : 'pill-neutral'}`}>
+                        {selectedDeal.statecode === 0 ? 'Active' : 'Inactive'}
+                      </span>
+                    </header>
+                    <p>{selectedDeal.crd2f_description ?? 'No description provided yet.'}</p>
+                    <dl>
+                      <div>
+                        <dt>Owner</dt>
+                        <dd>{selectedDeal.owneridname ?? 'Current user'}</dd>
+                      </div>
+                      <div>
+                        <dt>Category</dt>
+                        <dd>{selectedDeal.crd2f_category ?? '—'}</dd>
+                      </div>
+                      <div>
+                        <dt>Start · End</dt>
+                        <dd>
+                          {formatDate(selectedDeal.crd2f_startdate)} → {formatDate(selectedDeal.crd2f_enddate)}
+                        </dd>
+                      </div>
+                    </dl>
+                    <section>
+                      <h4>Linked claims</h4>
+                      {selectedDealClaims.length === 0 && <p className="muted">No claims tied to this deal yet.</p>}
+                      <ul>
+                        {selectedDealClaims.slice(0, 3).map((claim) => (
+                          <li key={claim.crd2f_promotionclaimid}>
+                            <strong>{claim.crd2f_claimnumber}</strong> · {formatAmount(claim.crd2f_claimamount)}
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  </div>
+                ) : (
+                  <p className="muted">Select a promotion to inspect details.</p>
+                )}
+              </div>
+            </div>
+
+            {dealFormOpen && (
+              <form className="entity-form" onSubmit={handleDealSubmit}>
+                <div className="form-grid">
+                  <label>
+                    <span>Deal name *</span>
+                    <input
+                      type="text"
+                      value={dealForm.name}
+                      onChange={(event) => setDealForm((prev) => ({ ...prev, name: event.target.value }))}
+                      required
+                    />
+                  </label>
+                  <label>
+                    <span>Category</span>
+                    <input
+                      type="text"
+                      value={dealForm.category}
+                      onChange={(event) => setDealForm((prev) => ({ ...prev, category: event.target.value }))}
+                    />
+                  </label>
+                  <label>
+                    <span>Start date</span>
+                    <input
+                      type="date"
+                      value={dealForm.startDate}
+                      onChange={(event) => setDealForm((prev) => ({ ...prev, startDate: event.target.value }))}
+                    />
+                  </label>
+                  <label>
+                    <span>End date</span>
+                    <input
+                      type="date"
+                      value={dealForm.endDate}
+                      onChange={(event) => setDealForm((prev) => ({ ...prev, endDate: event.target.value }))}
+                    />
+                  </label>
+                </div>
+                <label>
+                  <span>Description</span>
+                  <textarea
+                    value={dealForm.description}
+                    onChange={(event) => setDealForm((prev) => ({ ...prev, description: event.target.value }))}
+                    rows={3}
+                  />
+                </label>
+                {dealFeedback && (
+                  <p className={dealFeedback.type === 'error' ? 'inline-error' : 'inline-feedback success'}>
+                    {dealFeedback.message}
+                  </p>
+                )}
+                <div className="form-actions">
+                  <button
+                    type="button"
+                    className="ghost"
+                    onClick={() => {
+                      setDealFormOpen(false)
+                      resetDealForm()
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="cta" disabled={syncing}>
+                    {syncing ? 'Saving…' : 'Save deal'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </article>
+
+          <article className="ops-panel">
+            <header className="ops-panel__header">
+              <div>
+                <p className="eyebrow">Claims</p>
+                <h3>Claim cockpit</h3>
+                <p className="muted">
+                  {claims.length
+                    ? `${claims.length} records loaded from crd2f_promotionclaim.`
+                    : 'No claims submitted yet.'}
+                </p>
+              </div>
+              <button className="cta" onClick={() => setClaimFormOpen((open) => !open)}>
+                {claimFormOpen ? 'Close form' : 'Add claim'}
+              </button>
+            </header>
+
+            <div className="ops-panel__body">
+              <div className="ops-panel__list">
+                <table className="entity-table">
+                  <thead>
+                    <tr>
+                      <th>Claim</th>
+                      <th>Deal</th>
+                      <th>Amount</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {claims.map((claim) => {
+                      const status = getClaimStatus(claim)
+                      return (
+                        <tr
+                          key={claim.crd2f_promotionclaimid}
+                          className={claim.crd2f_promotionclaimid === selectedClaimId ? 'selected' : ''}
+                          onClick={() => setSelectedClaimId(claim.crd2f_promotionclaimid)}
+                        >
+                          <td>
+                            <strong>{claim.crd2f_claimnumber}</strong>
+                            <small>{formatDate(claim.crd2f_claimdate)}</small>
+                          </td>
+                          <td>{claim.crd2f_dealname ?? 'Unlinked'}</td>
+                          <td>{formatAmount(claim.crd2f_claimamount)}</td>
+                          <td>
+                            <span className={`pill ${status.className}`}>{status.label}</span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                    {!claims.length && (
+                      <tr>
+                        <td colSpan={4} className="muted">
+                          No Dataverse claims yet. Use "Add claim" to raise one.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <div className="ops-panel__detail">
+                {selectedClaim ? (
+                  <div className="entity-detail">
+                    <header>
+                      <h3>{selectedClaim.crd2f_claimnumber}</h3>
+                      <span className={`pill ${getClaimStatus(selectedClaim).className}`}>
+                        {getClaimStatus(selectedClaim).label}
+                      </span>
+                    </header>
+                    <dl>
+                      <div>
+                        <dt>Deal</dt>
+                        <dd>{selectedClaim.crd2f_dealname ?? 'Unlinked'}</dd>
+                      </div>
+                      <div>
+                        <dt>Vendor</dt>
+                        <dd>{selectedClaim.crd2f_vendorname ?? 'Not specified'}</dd>
+                      </div>
+                      <div>
+                        <dt>Amount</dt>
+                        <dd>{formatAmount(selectedClaim.crd2f_claimamount)}</dd>
+                      </div>
+                      <div>
+                        <dt>Claim date</dt>
+                        <dd>{formatDate(selectedClaim.crd2f_claimdate)}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                ) : (
+                  <p className="muted">Select a claim to drill into details.</p>
+                )}
+              </div>
+            </div>
+
+            {claimFormOpen && (
+              <form className="entity-form" onSubmit={handleClaimSubmit}>
+                <div className="form-grid">
+                  <label>
+                    <span>Claim number *</span>
+                    <input
+                      type="text"
+                      value={claimForm.claimNumber}
+                      onChange={(event) => setClaimForm((prev) => ({ ...prev, claimNumber: event.target.value }))}
+                      required
+                    />
+                  </label>
+                  <label>
+                    <span>Claim amount (AED)</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={claimForm.amount}
+                      onChange={(event) => setClaimForm((prev) => ({ ...prev, amount: event.target.value }))}
+                    />
+                  </label>
+                  <label>
+                    <span>Claim date</span>
+                    <input
+                      type="date"
+                      value={claimForm.claimDate}
+                      onChange={(event) => setClaimForm((prev) => ({ ...prev, claimDate: event.target.value }))}
+                    />
+                  </label>
+                  <label>
+                    <span>Deal</span>
+                    <select
+                      value={claimForm.dealId}
+                      onChange={(event) => setClaimForm((prev) => ({ ...prev, dealId: event.target.value }))}
+                    >
+                      <option value="">Select a deal</option>
+                      {deals.map((deal) => (
+                        <option key={deal.crd2f_promotiondealid} value={deal.crd2f_promotiondealid}>
+                          {deal.crd2f_dealname ?? 'Untitled deal'}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Vendor</span>
+                    <select
+                      value={claimForm.vendorId}
+                      onChange={(event) => setClaimForm((prev) => ({ ...prev, vendorId: event.target.value }))}
+                    >
+                      <option value="">Select a vendor</option>
+                      {vendors.map((vendor) => (
+                        <option key={vendor.crd2f_vendorid} value={vendor.crd2f_vendorid}>
+                          {vendor.crd2f_vendorname}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                {claimFeedback && (
+                  <p className={claimFeedback.type === 'error' ? 'inline-error' : 'inline-feedback success'}>
+                    {claimFeedback.message}
+                  </p>
+                )}
+                <div className="form-actions">
+                  <button
+                    type="button"
+                    className="ghost"
+                    onClick={() => {
+                      setClaimFormOpen(false)
+                      resetClaimForm()
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="cta" disabled={syncing}>
+                    {syncing ? 'Submitting…' : 'Submit claim'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </article>
         </div>
       </section>
 
@@ -485,12 +872,12 @@ function App() {
             <p>Live tiles mapped to Dataverse tables.</p>
           </div>
           <div className="status-grid">
-            {statusBoard.map((tile) => (
+            {statusTiles.map((tile) => (
               <div key={tile.label} className="status-tile">
                 <span>{tile.label}</span>
                 <strong>{tile.value}</strong>
                 <small>{tile.table}</small>
-                <em>{tile.trend} today</em>
+                <em>{syncing ? 'Syncing…' : 'Up to date'}</em>
               </div>
             ))}
           </div>
@@ -499,16 +886,16 @@ function App() {
           <p className="eyebrow">SLA cockpit</p>
           <h2>{slaHealth}% on-time</h2>
           <p>
-            {slaBreaches.length} claim(s) require attention. Escalations auto-issue to
-            Finance + Retail leadership with context from crd2f_audittrail.
+            {slaBreaches.length} claim(s) require attention. Escalations auto-issue to Finance + Retail leadership with
+            context from crd2f_audittrail.
           </p>
           <ul>
             {slaBreaches.map((claim) => (
-              <li key={claim.claimId}>
-                <strong>{claim.claimId}</strong> {currencyFormatter.format(claim.amount)} ·{' '}
-                {claim.slaStatus}
+              <li key={claim.crd2f_promotionclaimid}>
+                <strong>{claim.crd2f_claimnumber}</strong> {formatAmount(claim.crd2f_claimamount)} · Breached
               </li>
             ))}
+            {!slaBreaches.length && <li className="muted">All tracked claims are within SLA.</li>}
           </ul>
         </div>
       </section>
@@ -519,7 +906,7 @@ function App() {
           <p>Uploads powered by crd2f_promotionproof with validation gates.</p>
         </div>
         <div className="repository-grid">
-          {proofs.map((proof) => (
+          {proofShowcase.map((proof) => (
             <article key={proof.id} className="repository-card">
               <header>
                 <strong>{proof.channel}</strong>
@@ -530,9 +917,7 @@ function App() {
                   <li key={asset}>{asset}</li>
                 ))}
               </ul>
-              <footer>
-                Uploaded by {proof.uploadedBy} · Linked deal evidence
-              </footer>
+              <footer>Uploaded by {proof.uploadedBy} · Linked deal evidence</footer>
             </article>
           ))}
         </div>
@@ -544,7 +929,7 @@ function App() {
           <p>Secure, limited-access workspace referencing crd2f_vendor & systemuser.</p>
         </div>
         <div className="vendor-grid">
-          {vendors.map((vendor) => (
+          {vendorSpotlight.map((vendor) => (
             <article key={vendor.id} className="vendor-card">
               <header>
                 <strong>{vendor.name}</strong>
@@ -641,6 +1026,14 @@ function App() {
         </div>
       </section>
     </div>
+  )
+}
+
+function App() {
+  return (
+    <DataverseProvider>
+      <Workspace />
+    </DataverseProvider>
   )
 }
 
