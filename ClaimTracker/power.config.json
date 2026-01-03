@@ -1,0 +1,63 @@
+{
+  "appId": "",
+  "appDisplayName": "Claim Tracker",
+  "description": null,
+  "environmentId": "9e7e6b86-2a03-eeaa-bc99-9ed6103cefd6",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "logoPath": "Default",
+  "localAppUrl": "http://localhost:3000/",
+  "region": "prod",
+  "connectionReferences": {},
+  "databaseReferences": {
+    "default.cds": {
+      "state": "Configured",
+      "instanceUrl": "https://org76516836.crm8.dynamics.com/",
+      "webApiVersion": "v9.0",
+      "dataSources": {
+        "promotionclaims": {
+          "entitySetName": "crd2f_promotionclaims",
+          "logicalName": "crd2f_promotionclaim",
+          "isHidden": false
+        },
+        "promotionproofs": {
+          "entitySetName": "crd2f_promotionproofs",
+          "logicalName": "crd2f_promotionproof",
+          "isHidden": false
+        },
+        "promotionstatuses": {
+          "entitySetName": "crd2f_promotionstatuses",
+          "logicalName": "crd2f_promotionstatus",
+          "isHidden": false
+        },
+        "promotiondeals": {
+          "entitySetName": "crd2f_promotiondeals",
+          "logicalName": "crd2f_promotiondeal",
+          "isHidden": false
+        },
+        "vendors": {
+          "entitySetName": "crd2f_vendors",
+          "logicalName": "crd2f_vendor",
+          "isHidden": false
+        },
+        "audittrails": {
+          "entitySetName": "crd2f_audittrails",
+          "logicalName": "crd2f_audittrail",
+          "isHidden": false
+        },
+        "users": {
+          "entitySetName": "systemusers",
+          "logicalName": "systemuser",
+          "isHidden": false
+        },
+        "userroles": {
+          "entitySetName": "crd2f_userroles",
+          "logicalName": "crd2f_userrole",
+          "isHidden": false
+        }
+      },
+      "version": "v9.0",
+      "environmentVariableName": ""
+    }
+  }
+}

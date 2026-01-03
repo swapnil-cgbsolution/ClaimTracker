@@ -1,0 +1,5 @@
+pac-cli/
+claimtracker/node_modules/
+claimtracker/dist/
+.vscode/
+.DS_Store
