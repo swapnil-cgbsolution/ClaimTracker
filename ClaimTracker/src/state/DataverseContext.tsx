@@ -177,16 +177,22 @@ export function DataverseProvider({ children }: PropsWithChildren) {
       }
 
       await withSync(async () => {
-        await Crd2f_promotiondealsService.create({
+        const payload: Partial<Omit<Crd2f_promotiondealsBase, 'crd2f_promotiondealid'>> &
+          Record<string, unknown> = {
           crd2f_dealname: draft.name,
           crd2f_description: draft.description,
           crd2f_category: draft.category,
           crd2f_startdate: draft.startDate ? new Date(draft.startDate).toISOString() : undefined,
           crd2f_enddate: draft.endDate ? new Date(draft.endDate).toISOString() : undefined,
-          ownerid: user.objectId,
-          owneridtype: 'systemusers',
           statecode: 0,
-        } as Omit<Crd2f_promotiondealsBase, 'crd2f_promotiondealid'>)
+        }
+
+        const ownerPath = buildLookupPath('systemusers', user.objectId!)
+        payload['ownerid@odata.bind'] = ownerPath
+
+        await Crd2f_promotiondealsService.create(
+          payload as Omit<Crd2f_promotiondealsBase, 'crd2f_promotiondealid'>
+        )
         await fetchData()
       })
     },
@@ -205,10 +211,11 @@ export function DataverseProvider({ children }: PropsWithChildren) {
           crd2f_claimnumber: draft.claimNumber,
           crd2f_claimamount: draft.amount,
           crd2f_claimdate: draft.claimDate ? new Date(draft.claimDate).toISOString() : undefined,
-          ownerid: user.objectId,
-          owneridtype: 'systemusers',
           statecode: 0,
         }
+
+        const ownerPath = buildLookupPath('systemusers', user.objectId!)
+        payload['ownerid@odata.bind'] = ownerPath
 
         if (draft.dealId) {
           payload['crd2f_Deal@odata.bind'] = buildLookupPath('crd2f_promotiondeals', draft.dealId)
